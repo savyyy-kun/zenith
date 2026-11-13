@@ -1,7 +1,8 @@
 // Zenith judge: decides whether an off-list answer fits the prompt and how rare it is.
-// Runs on Cloudflare Workers AI (free daily allowance, no API key needed).
+// Runs on NVIDIA NIM (OpenAI-compatible). Set the key once: `wrangler secret put NVIDIA_API_KEY`.
 
-const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+const NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const MODEL = "meta/llama-3.3-70b-instruct";
 const ALLOWED = ["https://savyyy-kun.github.io"];
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
@@ -12,6 +13,17 @@ Reply with only JSON, nothing else: {"valid":true or false,"rarity":number 0-100
 
 const clean = (s, n) =>
   String(s ?? "").normalize("NFKC").replace(/[^\p{L}\p{N} '\-.&]/gu, " ").replace(/\s+/g, " ").trim().slice(0, n);
+async function ask(env, messages) {
+  const r = await fetch(NIM_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.NVIDIA_API_KEY}` },
+    body: JSON.stringify({ model: MODEL, messages, max_tokens: 60, temperature: 0 }),
+  });
+  if (!r.ok) throw new Error(`NIM ${r.status}`);
+  const content = (await r.json())?.choices?.[0]?.message?.content ?? "";
+  return JSON.parse(content.match(/\{[\s\S]*?\}/)[0]);
+}
+
 const list = (a) => (Array.isArray(a) ? a.slice(0, 4).map((x) => clean(x, 30)).filter(Boolean).join(", ") : "");
 
 export default {
@@ -38,7 +50,7 @@ export default {
 
     // Same prompt + answer always gets the same verdict, and costs nothing the second time.
     const cacheKey = new Request(
-      "https://zenith-judge.cache/v2/" + encodeURIComponent(prompt.toLowerCase()) + "/" + encodeURIComponent(answer.toLowerCase()));
+      "https://zenith-judge.cache/v3/" + encodeURIComponent(prompt.toLowerCase()) + "/" + encodeURIComponent(answer.toLowerCase()));
     try {
       const hit = await caches.default.match(cacheKey);
       if (hit) return json(await hit.json());
@@ -46,18 +58,12 @@ export default {
 
     let verdict;
     try {
-      const out = await env.AI.run(MODEL, {
-        messages: [
-          { role: "system", content: SYSTEM },
-          { role: "user", content:
-              `Prompt: ${prompt}\nVery common answers (rarity near 0): ${list(body.common) || "n/a"}\n` +
-              `Rare answers (rarity near 95): ${list(body.rare) || "n/a"}\nPlayer's answer: ${answer}` },
-        ],
-        max_tokens: 60,
-        temperature: 0,
-      });
-      const raw = out?.response ?? out?.choices?.[0]?.message?.content ?? out;
-      const parsed = typeof raw === "object" && raw ? raw : JSON.parse(String(raw).match(/\{[\s\S]*?\}/)[0]);
+      const parsed = await ask(env, [
+        { role: "system", content: SYSTEM },
+        { role: "user", content:
+            `Prompt: ${prompt}\nVery common answers (rarity near 0): ${list(body.common) || "n/a"}\n` +
+            `Rare answers (rarity near 95): ${list(body.rare) || "n/a"}\nPlayer's answer: ${answer}` },
+      ]);
       if (typeof parsed.valid !== "boolean") throw new Error("no verdict");
       verdict = {
         valid: parsed.valid,
