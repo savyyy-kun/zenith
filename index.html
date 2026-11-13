@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zenith · fly higher with rarer answers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --amber:#ffb454; --coral:#ff7a59; --ink:#0a0c1c; --glass:rgba(10,12,28,.74);
+  --line:rgba(255,255,255,.14); --dim:rgba(255,255,255,.62);
+  --display:"Fraunces",Georgia,serif; --sans:"DM Sans",system-ui,sans-serif; --mono:"DM Mono",ui-monospace,Menlo,monospace;
+  --base:64vh;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+
+#stage{position:fixed;inset:0;overflow:hidden}
+#world{position:absolute;left:0;right:0;bottom:0;will-change:transform;
+  transition:transform 1.9s cubic-bezier(.65,0,.35,1)}
+#world.snap{transition:transform 1.1s cubic-bezier(.5,0,.2,1)}
+
+/* stars */
+#stars{position:absolute;inset:0;opacity:0;transition:opacity 1.9s ease;pointer-events:none}
+#stars i{position:absolute;left:0;top:0;width:1.5px;height:1.5px;border-radius:50%;background:transparent}
+#stars i:nth-child(1){animation:twinkle 3.2s ease-in-out infinite}
+#stars i:nth-child(2){animation:twinkle 4.7s ease-in-out -2s infinite}
+@keyframes twinkle{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ground */
+#ground{position:absolute;left:0;right:0;bottom:0;height:var(--base);
+  background:linear-gradient(#2c4a3e,#16261f 55%,#0c1512)}
+#ground svg{position:absolute;left:0;bottom:100%;width:100%;height:90px;display:block;margin-bottom:-1px}
+#pad{position:absolute;left:50%;top:-4px;width:96px;height:8px;margin-left:-48px;border-radius:3px;background:#0b100e;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+#pad::before,#pad::after{content:"";position:absolute;bottom:8px;width:3px;height:54px;background:linear-gradient(#55615c,#1a211e)}
+#pad::before{left:6px}#pad::after{right:6px}
+
+/* clouds */
+.cloud{position:absolute;height:38px;border-radius:40px;background:rgba(255,255,255,.82);filter:blur(7px);
+  animation:drift linear infinite alternate}
+.cloud::before{content:"";position:absolute;left:18%;top:-45%;width:46%;height:120%;border-radius:50%;background:inherit}
+@keyframes drift{from{transform:translateX(-40px)}to{transform:translateX(40px)}}
+
+/* markers */
+.mark{position:absolute;left:0;right:0;height:0;border-top:1px dashed rgba(255,255,255,.28)}
+.mark span{position:absolute;top:-12px;font:500 11px/1 var(--mono);letter-spacing:.06em;white-space:nowrap;
+  padding:6px 9px;border-radius:99px;background:rgba(8,10,24,.62);color:rgba(255,255,255,.9);backdrop-filter:blur(4px)}
+.mark.l span{left:14px}.mark.r span{right:14px}
+.mark.zone{border-top:1px solid rgba(255,180,84,.55)}
+.mark.zone span{color:var(--amber);letter-spacing:.2em;text-transform:uppercase}
+#moon{position:absolute;left:50%;width:240px;height:240px;margin-left:-120px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#fdfbf2,#d7d3c4 58%,#8f8c82);
+  box-shadow:0 0 90px rgba(255,250,225,.4),inset -18px -22px 50px rgba(0,0,0,.35)}
+#moon::before,#moon::after{content:"";position:absolute;border-radius:50%;background:rgba(0,0,0,.1);box-shadow:inset 3px 3px 6px rgba(0,0,0,.18)}
+#moon::before{width:52px;height:52px;left:54px;top:70px}
+#moon::after{width:30px;height:30px;left:140px;top:132px}
+
+/* ship */
+#ship{position:absolute;left:50%;bottom:var(--base);width:46px;margin-left:-23px;animation:bob 4s ease-in-out infinite;z-index:3}
+#ship svg{display:block;width:100%;overflow:visible}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+#ship.pad{animation:none}
+#flame{transform-origin:50% 0;transform-box:fill-box;transform:scaleY(.0);transition:transform .35s ease}
+#ship.hover #flame{transform:scaleY(.42);animation:flick .13s linear infinite alternate}
+#ship.burn #flame{transform:scaleY(1.25);animation:flickBig .09s linear infinite alternate}
+#ship.burn{animation:rumble .09s linear infinite}
+@keyframes flick{to{transform:scaleY(.52) scaleX(.9)}}
+@keyframes flickBig{to{transform:scaleY(1.5) scaleX(.86)}}
+@keyframes rumble{0%{transform:translate(-1px,0)}50%{transform:translate(1px,-1px)}100%{transform:translate(0,1px)}}
+#ship.stall{animation:stall .5s ease}
+@keyframes stall{20%{transform:translate(-6px,4px) rotate(-7deg)}55%{transform:translate(5px,8px) rotate(6deg)}100%{transform:none}}
+
+#streaks{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s}
+#streaks.on{opacity:1}
+#streaks i{position:absolute;top:-20%;width:1.5px;height:90px;background:linear-gradient(transparent,rgba(255,255,255,.55));animation:fall .55s linear infinite}
+@keyframes fall{to{transform:translateY(140vh)}}
+
+/* HUD */
+#hud{position:absolute;left:0;right:0;top:0;z-index:5;display:flex;justify-content:space-between;align-items:flex-start;
+  padding:max(14px,env(safe-area-inset-top)) 16px 0;pointer-events:none;opacity:0;transform:translateY(-12px);transition:.6s ease}
+#hud.on{opacity:1;transform:none}
+.chip{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:9px 13px;backdrop-filter:blur(10px);min-width:108px}
+.chip small{display:block;font:500 9.5px/1 var(--mono);letter-spacing:.2em;color:var(--dim);margin-bottom:6px}
+.chip b{font:600 20px/1 var(--display);font-variant-numeric:tabular-nums}
+.chip em{display:block;font:500 10px/1 var(--mono);font-style:normal;color:var(--amber);margin-top:6px;letter-spacing:.1em;text-transform:uppercase}
+.chip.right{text-align:right}
+#pips{display:flex;gap:6px;margin-top:14px}
+#pips i{width:9px;height:9px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);background:rgba(8,10,24,.4);transition:.4s}
+#pips i.hit{background:var(--amber);border-color:var(--amber);box-shadow:0 0 10px var(--amber)}
+#pips i.miss{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.3)}
+#pips i.now{transform:scale(1.35);border-color:#fff}
+
+/* panel */
+#panel{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));width:min(560px,calc(100% - 24px));transform:translateX(-50%);z-index:6;
+  background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:22px 22px 20px;backdrop-filter:blur(16px);
+  box-shadow:0 24px 70px rgba(0,0,0,.5)}
+.view{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.eyebrow{font:500 10.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--amber)}
+h1{font:800 clamp(44px,11vw,64px)/.95 var(--display);letter-spacing:-.03em;margin:10px 0 10px}
+h1 span{display:inline-block;animation:letter .8s cubic-bezier(.2,.9,.2,1) both}
+@keyframes letter{from{opacity:0;transform:translateY(26px) rotate(6deg)}}
+h2{font:600 clamp(24px,6vw,31px)/1.12 var(--display);letter-spacing:-.015em;margin:10px 0 16px}
+p{color:var(--dim);font-size:14.5px;line-height:1.5}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:18px;padding:15px 18px;border-radius:14px;
+  background:linear-gradient(135deg,var(--amber),var(--coral));color:#1b0e04;font-weight:700;font-size:15.5px;letter-spacing:.02em;
+  transition:transform .15s,box-shadow .2s,opacity .3s;box-shadow:0 8px 26px rgba(255,122,89,.35)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(255,122,89,.5)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn kbd{font:500 11px var(--mono);padding:3px 6px;border-radius:5px;background:rgba(0,0,0,.16)}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.rules div{border:1px solid var(--line);border-radius:12px;padding:10px;font:500 11px/1.35 var(--mono);color:var(--dim)}
+.rules b{display:block;font:600 19px/1 var(--display);color:#fff;margin-bottom:5px}
+
+.timer{display:flex;align-items:center;gap:12px}
+.bar{flex:1;height:5px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--coral),var(--amber));transform-origin:0 50%;border-radius:9px}
+.secs{font:500 13px/1 var(--mono);font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+.timer.low .secs{color:var(--coral);animation:pulse .5s ease infinite alternate}
+@keyframes pulse{to{transform:scale(1.18)}}
+.field{display:flex;gap:8px}
+.field input{flex:1;min-width:0;font:500 17px var(--sans);color:#fff;padding:14px 16px;border-radius:14px;outline:0;
+  background:rgba(255,255,255,.07);border:1.5px solid var(--line);transition:border-color .2s,box-shadow .2s}
+.field input:focus{border-color:var(--amber);box-shadow:0 0 0 4px rgba(255,180,84,.16)}
+.field input::placeholder{color:rgba(255,255,255,.35)}
+.field button{padding:0 18px;border-radius:14px;background:#fff;color:#111;font-weight:700}
+.field.shake{animation:shake .38s}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.hint{min-height:18px;margin-top:9px;font:500 11.5px/1.4 var(--mono);color:var(--dim)}
+.hint.bad{color:#ff9d86}
+
+.said{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:10px 0 14px}
+.said h2{margin:0;text-transform:capitalize;overflow-wrap:anywhere}
+.pts{font:800 34px/1 var(--display);color:var(--amber);font-variant-numeric:tabular-nums;white-space:nowrap;animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}
+.pts.zero{color:rgba(255,255,255,.4)}
+@keyframes pop{from{transform:scale(.4);opacity:0}}
+.meter{position:relative;height:8px;border-radius:9px;background:linear-gradient(90deg,#4a5578,#8d7bd6 45%,var(--coral) 78%,var(--amber))}
+.meter i{position:absolute;top:50%;left:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 4px rgba(255,255,255,.2),0 4px 12px rgba(0,0,0,.5);transition:left 1.3s cubic-bezier(.2,.9,.2,1) .15s}
+.ends{display:flex;justify-content:space-between;font:500 9.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:10px}
+.facts{margin-top:14px;font-size:13.5px;line-height:1.6;color:var(--dim)}
+.facts b{color:#fff;font-weight:500;text-transform:capitalize}
+
+.big{font:800 clamp(40px,10vw,56px)/1 var(--display);letter-spacing:-.03em;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+.rows{margin-top:14px;max-height:30vh;overflow:auto;border-top:1px solid var(--line)}
+.rows div{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;
+  animation:rise .5s both}
+.rows q{quotes:none;color:var(--dim);grid-column:1}
+.rows b{grid-column:1;font-weight:500;text-transform:capitalize}
+.rows u{grid-row:1/3;grid-column:2;align-self:center;text-decoration:none;font:600 17px var(--display);color:var(--amber);font-variant-numeric:tabular-nums}
+.rows .nil b,.rows .nil u{color:rgba(255,255,255,.38)}
+.best{margin-top:10px;font:500 11px var(--mono);letter-spacing:.1em;color:var(--dim)}
+
+@media (max-height:640px){#panel{padding:16px 18px 14px}h2{margin:8px 0 12px}.rules{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}#world{transition-duration:.3s}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <div id="moon"></div>
+    <div id="ground">
+      <svg viewBox="0 0 1200 90" preserveAspectRatio="none"><path fill="#2c4a3e" d="M0 90V52c120-34 230-30 340-6s190 34 300 4 210-52 330-26 160 30 230 14V90z"/></svg>
+      <div id="pad"></div>
+    </div>
+  </div>
+  <div id="stars"><i></i><i></i></div>
+  <div id="streaks"></div>
+  <div id="ship" class="pad">
+    <svg viewBox="0 0 46 84">
+      <path id="flame" d="M15 62h16l-8 40z" fill="url(#fl)"/>
+      <path d="M6 60l9-16v18zM40 60l-9-16v18z" fill="#ff7a59"/>
+      <path d="M23 0c10 12 13 26 13 40v22H10V40C10 26 13 12 23 0z" fill="#f6f1e7"/>
+      <path d="M23 0c5 6 8 12 10 19H13c2-7 5-13 10-19z" fill="#ff7a59"/>
+      <circle cx="23" cy="34" r="6.5" fill="#12203f" stroke="#ffb454" stroke-width="2.5"/>
+      <rect x="10" y="56" width="26" height="6" fill="#cfc8ba"/>
+      <defs><linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d6"/><stop offset=".4" stop-color="#ffb454"/><stop offset="1" stop-color="#ff5a3c" stop-opacity="0"/></linearGradient></defs>
+    </svg>
+  </div>
+
+  <div id="hud">
+    <div class="chip"><small>ALTITUDE</small><b id="alt">0 m</b><em id="zone">Launch pad</em></div>
+    <div id="pips"></div>
+    <div class="chip right"><small>SCORE</small><b id="score">0</b><em id="round">&nbsp;</em></div>
+  </div>
+
+  <div id="panel"></div>
+</div>
+
+<script>
+/* ---------- prompt bank: answers ordered from most common to rarest; "/" separates accepted spellings ---------- */
+const BANK = [
+["Name a fruit","apple,banana,orange,strawberry,grape/grapes,mango,watermelon,pineapple,peach,pear,cherry,blueberry,kiwi,lemon,raspberry,plum,pomegranate,coconut,papaya,apricot,fig,guava,lychee/litchi,passion fruit,dragon fruit/pitaya,persimmon,kumquat,durian,starfruit/carambola,jackfruit,quince,rambutan,mangosteen"],
+["Name a vegetable","carrot,broccoli,potato,tomato,lettuce,cucumber,onion,spinach,corn,pepper/bell pepper,peas/pea,celery,cauliflower,cabbage,garlic,zucchini/courgette,mushroom,eggplant/aubergine,asparagus,kale,beet/beetroot,radish,pumpkin,sweet potato,brussels sprouts/brussel sprouts,leek,turnip,artichoke,okra,parsnip,bok choy/pak choi,fennel,kohlrabi,rutabaga/swede"],
+["Name a dog breed","labrador/lab/labrador retriever,golden retriever,german shepherd,poodle,bulldog,beagle,husky/siberian husky,chihuahua,pug,dachshund,rottweiler,corgi,boxer,great dane,doberman/dobermann,shih tzu,border collie/collie,dalmatian,pomeranian,yorkie/yorkshire terrier,greyhound,french bulldog/frenchie,pit bull,saint bernard/st bernard,maltese,shiba inu/shiba,akita,basset hound,bloodhound,whippet,samoyed,newfoundland,weimaraner,vizsla,basenji"],
+["Name a country in Europe","france,germany,italy,spain,united kingdom/uk/england/britain/great britain,portugal,greece,netherlands/holland,sweden,switzerland,ireland,poland,norway,belgium,austria,denmark,finland,ukraine,russia,czech republic/czechia,hungary,croatia,romania,iceland,turkey,bulgaria,serbia,slovakia,slovenia,estonia,lithuania,latvia,luxembourg,albania,malta,belarus,monaco,moldova,montenegro,north macedonia/macedonia,bosnia/bosnia and herzegovina,andorra,liechtenstein,san marino"],
+["Name a country in Africa","south africa,egypt,nigeria,kenya,morocco,ethiopia,ghana,tanzania,uganda,algeria,zimbabwe,madagascar,senegal,sudan,somalia,tunisia,libya,cameroon,congo/dr congo/democratic republic of the congo,rwanda,angola,zambia,mali,namibia,botswana,mozambique,ivory coast/cote d'ivoire,niger,chad,liberia,sierra leone,malawi,togo,benin,gabon,burkina faso,eritrea,mauritania,lesotho,djibouti,eswatini/swaziland,comoros"],
+["Name a country in Asia","china,japan,india,south korea/korea,thailand,vietnam,indonesia,philippines,pakistan,singapore,malaysia,north korea,nepal,mongolia,bangladesh,sri lanka,iran,iraq,saudi arabia,afghanistan,cambodia,israel,kazakhstan,myanmar/burma,laos,uzbekistan,bhutan,jordan,qatar,united arab emirates/uae,lebanon,syria,yemen,oman,kuwait,maldives,kyrgyzstan,tajikistan,turkmenistan,brunei,bahrain,timor leste/east timor"],
+["Name a musical instrument","guitar,piano,drums/drum,violin,flute,trumpet,saxophone/sax,cello,bass/bass guitar,clarinet,harp,ukulele,trombone,banjo,harmonica,tuba,keyboard,accordion,oboe,xylophone,viola,mandolin,bagpipes/bagpipe,tambourine,french horn,organ,bassoon,triangle,recorder,sitar,kazoo,didgeridoo,theremin,harpsichord,lute,ocarina,zither,marimba"],
+["Name a sport","soccer/football,basketball,baseball,tennis,american football,hockey/ice hockey,golf,swimming,volleyball,boxing,cricket,rugby,running/track/athletics,cycling,skiing,wrestling,gymnastics,badminton,table tennis/ping pong,surfing,snowboarding,lacrosse,bowling,archery,fencing,rowing,karate,judo,softball,polo,water polo,handball,squash,darts,curling,pickleball,bobsled/bobsleigh,biathlon"],
+["Name a color","red,blue,green,yellow,purple,orange,pink,black,white,brown,gray/grey,violet,turquoise,gold,silver,teal,maroon,magenta,cyan,indigo,beige,navy,lavender,crimson,tan,olive,coral,scarlet,burgundy,mauve,fuchsia,periwinkle,chartreuse,vermilion/vermillion,ochre,cerulean,taupe,puce"],
+["Name an animal you'd see at a zoo","lion,elephant,giraffe,tiger,monkey,zebra,bear,gorilla,penguin,hippo/hippopotamus,rhino/rhinoceros,panda,kangaroo,crocodile,snake,flamingo,cheetah,leopard,wolf,camel,chimpanzee/chimp,koala,polar bear,orangutan,meerkat,otter,sloth,lemur,ostrich,peacock,red panda,tapir,capybara,okapi,anteater,binturong"],
+["Name a pizza topping","pepperoni,cheese/mozzarella,mushroom/mushrooms,sausage,pineapple,onion/onions,bacon,olives/olive/black olives,pepper/peppers/green pepper/bell pepper,ham,chicken,tomato,basil,spinach,jalapeno/jalapenos,anchovies/anchovy,garlic,beef/ground beef,salami,artichoke,feta,prosciutto,arugula/rocket,egg,corn/sweetcorn,pesto,goat cheese,truffle,capers,eggplant/aubergine,potato,tuna"],
+["Name something found in a kitchen","fridge/refrigerator,oven,stove,sink,microwave,knife,pan/frying pan,pot,fork,spoon,plate,toaster,cup/mug,dishwasher,blender,bowl,table,kettle,cutting board/chopping board,spatula,whisk,freezer,cabinet/cupboard,counter/countertop,glass,colander/strainer,grater,ladle,tongs,rolling pin,can opener/tin opener,peeler,oven mitt/oven glove,timer,corkscrew,mortar and pestle,garlic press"],
+["Name a chemical element","oxygen,hydrogen,gold,carbon,iron,helium,nitrogen,silver,sodium,copper,calcium,uranium,neon,lithium,potassium,mercury,lead,zinc,aluminum/aluminium,chlorine,sulfur/sulphur,titanium,platinum,magnesium,silicon,plutonium,nickel,tin,argon,phosphorus,fluorine,iodine,cobalt,radium,tungsten,krypton,xenon,boron,arsenic,chromium,beryllium,bismuth,gallium,cesium/caesium,osmium,francium,yttrium"],
+["Name a US state","california,texas,new york,florida,hawaii,alaska,washington,colorado,arizona,nevada,ohio,georgia,illinois,michigan,oregon,virginia,massachusetts,pennsylvania,new jersey,north carolina,tennessee,utah,montana,kansas,kentucky,louisiana,minnesota,wisconsin,maine,idaho,oklahoma,iowa,alabama,missouri,indiana,maryland,vermont,mississippi,south carolina,new mexico,wyoming,nebraska,arkansas,connecticut,west virginia,north dakota,south dakota,new hampshire,rhode island,delaware"],
+["Name a capital city","paris,london,tokyo,washington/washington dc,rome,berlin,madrid,beijing,moscow,cairo,ottawa,canberra,athens,dublin,mexico city,seoul,new delhi/delhi,amsterdam,vienna,lisbon,bangkok,stockholm,oslo,buenos aires,brussels,copenhagen,havana,nairobi,warsaw,lima,helsinki,prague,budapest,brasilia,jakarta,manila,kyiv/kiev,hanoi,bogota,santiago,wellington,reykjavik,ankara,tehran,baghdad,riyadh,kathmandu,addis ababa,ulaanbaatar,montevideo,tbilisi,thimphu"],
+["Name a bird","eagle,robin,sparrow,pigeon,owl,crow,parrot,duck,penguin,seagull/gull,hawk,chicken,blue jay/bluejay,swan,flamingo,cardinal,hummingbird,goose,ostrich,peacock,turkey,raven,dove,woodpecker,falcon,pelican,finch,canary,vulture,stork,heron,toucan,magpie,swallow,emu,albatross,kingfisher,puffin,kiwi,wren,starling,condor,cassowary,hoopoe"],
+["Name a flower","rose,tulip,daisy,sunflower,lily,orchid,daffodil,carnation,lavender,poppy,violet,dandelion,lilac,peony,iris,marigold,hibiscus,jasmine,hydrangea,chrysanthemum,lotus,magnolia,pansy,buttercup,geranium,petunia,snapdragon,bluebell,begonia,azalea,foxglove,zinnia,gardenia,hyacinth,freesia,anemone,camellia,wisteria"],
+["Name a board game","monopoly,chess,scrabble,checkers/draughts,clue/cluedo,risk,sorry,life/game of life,candy land,catan/settlers of catan,battleship,trouble,connect four/connect 4,operation,backgammon,trivial pursuit,chutes and ladders/snakes and ladders,pictionary,jenga,guess who,twister,mouse trap,stratego,ticket to ride,yahtzee,go,pandemic,parcheesi/ludo,mancala,othello/reversi,carcassonne,boggle,taboo,scattergories,azul,wingspan"],
+["Name something you wear","shirt/t-shirt/tee,pants/trousers,shoes,hat,socks,jacket,dress,jeans,shorts,coat,sweater/jumper,underwear,skirt,scarf,gloves,belt,tie,boots,hoodie,glasses,watch,bra,sandals,suit,cap,vest,sunglasses,leggings,blouse,pajamas/pyjamas,mittens,tights,cardigan,overalls/dungarees,kilt,poncho,cummerbund,bow tie"],
+["Name an ice cream flavor","vanilla,chocolate,strawberry,mint chocolate chip/mint/mint chip,cookie dough,cookies and cream/oreo,rocky road,pistachio,coffee,caramel/salted caramel,butter pecan,neapolitan,cherry,banana,peanut butter,mango,coconut,lemon,raspberry,birthday cake,fudge,rum raisin,bubblegum,hazelnut,green tea/matcha,cotton candy,pumpkin,maple walnut/maple,tiramisu,stracciatella,lavender,black sesame,ube"],
+["Name a sea creature","shark,dolphin,whale,octopus,fish,jellyfish,crab,turtle/sea turtle,seal,starfish/sea star,squid,lobster,seahorse,stingray/ray,shrimp/prawn,eel,orca/killer whale,clownfish,sea lion,swordfish,manatee,walrus,otter/sea otter,oyster,clam,sea urchin/urchin,tuna,barracuda,narwhal,anglerfish,pufferfish/blowfish,manta ray,cuttlefish,sea cucumber,nudibranch,coelacanth"],
+["Name a language","english,spanish,french,german,chinese/mandarin,italian,japanese,russian,portuguese,arabic,hindi,korean,latin,greek,dutch,swedish,polish,turkish,hebrew,vietnamese,thai,bengali,urdu,swahili,norwegian,danish,finnish,czech,hungarian,persian/farsi,tagalog/filipino,indonesian,punjabi,tamil,irish/gaelic,welsh,icelandic,esperanto,zulu,basque,quechua,navajo"],
+["Name a job","doctor,teacher,lawyer,nurse,police officer/cop/police,firefighter/fireman,engineer,chef/cook,pilot,dentist,accountant,programmer/software engineer/developer,plumber,electrician,artist,farmer,scientist,writer/author,mechanic,waiter/waitress/server,actor/actress,carpenter,cashier,architect,journalist,vet/veterinarian,pharmacist,librarian,barber,baker,judge,astronaut,butcher,translator,surveyor,actuary,cartographer,sommelier,farrier"],
+["Name a shape","circle,square,triangle,rectangle,oval,star,hexagon,pentagon,diamond/rhombus,octagon,heart,cube,sphere,cylinder,cone,pyramid,trapezoid/trapezium,parallelogram,crescent,ellipse,heptagon,decagon,nonagon,prism,kite,torus,dodecagon,tetrahedron,dodecahedron,icosahedron"],
+["Name a breakfast food","eggs/egg,pancakes/pancake,cereal,bacon,toast,waffles/waffle,oatmeal/porridge,sausage,bagel,yogurt/yoghurt,muffin,french toast,croissant,hash browns,fruit,donut/doughnut,omelette/omelet,granola,biscuit/biscuits,smoothie,grits,avocado toast,crepe/crepes,burrito/breakfast burrito,scone,quiche,congee,shakshuka,kippers"],
+["Name a kind of tree","oak,pine,maple,palm,birch,willow,apple,cherry,redwood,elm,cedar,spruce,fir,ash,walnut,sequoia,aspen,beech,cypress,eucalyptus,poplar,magnolia,sycamore,chestnut,hickory,olive,baobab,juniper,mahogany,banyan,teak,yew,larch,ginkgo,hawthorn,alder,hornbeam"],
+["Name a card game","poker,blackjack/21,solitaire,go fish,uno,rummy/gin rummy/gin,war,hearts,spades,bridge,crazy eights,old maid,cribbage,snap,euchre,baccarat,pinochle,canasta,slapjack,whist,speed,bluff/cheat,president,pitch,skat,piquet"],
+["Name a dinosaur","tyrannosaurus/t rex/tyrannosaurus rex,triceratops,velociraptor/raptor,stegosaurus,brontosaurus,pterodactyl,brachiosaurus,diplodocus,spinosaurus,ankylosaurus,allosaurus,apatosaurus,iguanodon,parasaurolophus,dilophosaurus,pachycephalosaurus,archaeopteryx,giganotosaurus,carnotaurus,compsognathus,utahraptor,deinonychus,therizinosaurus,baryonyx,gallimimus,oviraptor,styracosaurus"],
+["Name a spice or herb","salt,pepper/black pepper,cinnamon,garlic,paprika,oregano,basil,cumin,ginger,thyme,rosemary,parsley,chili/chili powder/chilli,nutmeg,turmeric,cilantro/coriander,mint,sage,cloves/clove,dill,saffron,vanilla,cardamom,bay leaf/bay leaves,cayenne,mustard,fennel,tarragon,allspice,star anise/anise,sumac,marjoram,fenugreek,lovage"],
+["Name a river","nile,amazon,mississippi,thames,danube,yangtze,ganges,seine,colorado,rhine,hudson,missouri,mekong,congo,volga,euphrates,tigris,jordan,indus,niger,zambezi,yellow/yellow river/huang he,rio grande,columbia,ohio,yukon,tiber,murray,orinoco,loire,elbe,po,dnieper,shannon,limpopo,irrawaddy"],
+["Name a Greek god or goddess","zeus,poseidon,hades,athena,apollo,ares,aphrodite,hermes,hera,artemis,dionysus,hephaestus,demeter,persephone,eros,hestia,cronus/kronos,nike,helios,pan,gaia,hecate,nemesis,hypnos,morpheus,uranus/ouranos,thanatos,iris,selene,eris,tyche,nyx"],
+["Name a Shakespeare play","romeo and juliet,hamlet,macbeth,othello,a midsummer nights dream/midsummer nights dream,king lear,tempest,julius caesar,much ado about nothing,twelfth night,merchant of venice,taming of the shrew,richard iii/richard 3/richard the third,as you like it,henry v/henry 5,antony and cleopatra,winters tale,measure for measure,comedy of errors,coriolanus,titus andronicus,cymbeline,pericles,timon of athens,troilus and cressida"],
+["Name an organ in the human body","heart,brain,lungs/lung,liver,kidney/kidneys,stomach,skin,intestines/intestine,eyes/eye,bladder,pancreas,spleen,gallbladder,appendix,esophagus/oesophagus,thyroid,tongue,colon,uterus,thymus,pituitary/pituitary gland,adrenal gland/adrenals"],
+["Name something you'd find at the beach","sand,water/ocean/sea,shells/seashells/shell/seashell,umbrella,towel,waves/wave,sun,crab,seagull/seagulls,sunscreen,surfboard,sandcastle,swimsuit,ball/beach ball,bucket,lifeguard,seaweed,chair/beach chair,boat,sunglasses,rocks,palm tree,cooler,kite,flip flops,pier,jellyfish,driftwood,dune/dunes,starfish,tide pool,volleyball,snorkel,boardwalk"],
+["Name a way to get around","car,bus,train,plane/airplane/aeroplane,bike/bicycle,boat,truck,motorcycle/motorbike,taxi/cab,subway/metro,helicopter,ship,scooter,van,tram/streetcar,skateboard,ferry,horse,jet,rocket,canoe,limo/limousine,hot air balloon,kayak,tractor,submarine,segway,rickshaw,gondola,blimp/zeppelin,hovercraft,unicycle,sled/sleigh,monorail,funicular"],
+["Name a mountain","everest,kilimanjaro,k2,fuji,matterhorn,denali/mckinley,mont blanc,rainier,olympus,vesuvius,etna,st helens,rushmore,aconcagua,whitney,elbrus,sinai,kangchenjunga,eiger,annapurna,lhotse,hood,cook/aoraki,ararat,kenya,shasta,makalu,nanga parbat,vinson,kosciuszko"],
+["Name a famous painter","picasso,van gogh,da vinci/leonardo/leonardo da vinci,monet,michelangelo,rembrandt,dali/salvador dali,warhol,frida kahlo/kahlo,matisse,renoir,pollock,raphael,cezanne,vermeer,klimt,munch,okeeffe/georgia okeeffe,goya,botticelli,degas,manet,banksy,basquiat,kandinsky,caravaggio,magritte,hopper,rothko,turner,titian,gauguin,chagall,el greco,bosch,bruegel,hokusai,modigliani"],
+["Name a currency","dollar,euro,pound,yen,peso,rupee,franc,yuan/renminbi,ruble/rouble,won,bitcoin,dinar,krona/krone/kroner,lira,real,rand,shekel,dirham,baht,riyal,zloty,ringgit,forint,dong,rupiah,shilling,naira,kwacha,lev,tenge,hryvnia,taka,colon,birr,quetzal"],
+["Name a gemstone","diamond,ruby,emerald,sapphire,pearl,opal,amethyst,topaz,jade,garnet,turquoise,aquamarine,onyx,quartz,amber,peridot,moonstone,citrine,lapis lazuli/lapis,tanzanite,tourmaline,obsidian,agate,jasper,zircon,malachite,spinel,alexandrite,morganite"],
+["Name a type of pasta","spaghetti,penne,macaroni,fettuccine,lasagna/lasagne,ravioli,linguine,rigatoni,fusilli/rotini,tortellini,angel hair/capellini,farfalle/bowtie/bow tie,gnocchi,ziti,orzo,tagliatelle,shells/conchiglie,orecchiette,pappardelle,bucatini,cannelloni/manicotti,vermicelli,cavatappi,ditalini,gemelli,paccheri,mafaldine,strozzapreti"],
+["Name something in a classroom","desk,chair,whiteboard/board/blackboard/chalkboard,pencil,book/books/textbook,teacher,pen,computer/laptop,paper,student/students,clock,backpack/bag,marker/markers,projector,eraser/rubber,ruler,notebook,window,door,calculator,globe,map,scissors,glue,poster/posters,stapler,flag,chalk,bookshelf,pencil sharpener/sharpener,crayons/crayon,bin/trash can,protractor,abacus"],
+["Name an insect","ant,bee,fly,butterfly,mosquito,beetle,ladybug/ladybird,grasshopper,cockroach/roach,wasp,dragonfly,moth,cricket,caterpillar,flea,termite,praying mantis/mantis,firefly/lightning bug,hornet,stick insect/stick bug,cicada,locust,gnat,earwig,aphid,weevil,stink bug,silverfish,mayfly,lacewing,katydid"],
+["Name a dessert","cake,ice cream,pie,cookie/cookies,brownie/brownies,cheesecake,pudding,donut/doughnut,cupcake,chocolate,tiramisu,apple pie,creme brulee,mousse,macaron/macarons,churros/churro,tart,flan,sundae,eclair,baklava,cannoli,gelato,sorbet,trifle,pavlova,souffle,panna cotta,mochi,cobbler,profiterole/profiteroles,crumble,tres leches,gulab jamun,kulfi"],
+["Name a mythical creature","dragon,unicorn,mermaid,vampire,werewolf,fairy,phoenix,bigfoot/sasquatch,centaur,griffin/gryphon,troll,giant,zombie,ghost,pegasus,goblin,elf,minotaur,cyclops,kraken,yeti,hydra,medusa/gorgon,ogre,leprechaun,sphinx,loch ness monster/nessie,gnome,banshee,chimera,cerberus,basilisk,siren,golem,kelpie,wendigo,chupacabra,kitsune,selkie"],
+["Name a kind of weather","rain,snow,sun/sunny/sunshine,wind/windy,thunderstorm/thunder/storm,cloudy/clouds,fog/foggy,hail,tornado,hurricane,lightning,sleet,blizzard,drizzle,mist,heat wave/heatwave,frost,drought,monsoon,typhoon/cyclone,rainbow,humidity/humid,dust storm/sandstorm,freezing rain,haze,squall,derecho,graupel"],
+["Name something in outer space","sun,moon,star/stars,planet/planets,earth,black hole,asteroid,comet,galaxy,mars,satellite,meteor,milky way,nebula,astronaut,iss/space station/international space station,jupiter,saturn,rocket,supernova,dust,pluto,quasar,dark matter,pulsar,exoplanet,neutron star,kuiper belt,oort cloud,magnetar"],
+["Name a tool in a toolbox","hammer,screwdriver,wrench/spanner,pliers,saw,drill,tape measure/measuring tape,nails/nail,level/spirit level,screws/screw,chisel,utility knife/box cutter,allen key/allen wrench/hex key,sandpaper,clamp,file,duct tape/tape,crowbar,socket wrench/ratchet,mallet,wire cutters,stud finder,hacksaw,vise grips/vice grips,awl,plane,putty knife,caulk gun,plumb bob"],
+["Name a famous scientist","einstein,newton,darwin,curie/marie curie,hawking,galileo,tesla,edison,da vinci,pasteur,bohr,feynman,oppenheimer,sagan,franklin/rosalind franklin,turing,faraday,kepler,copernicus,mendel,archimedes,planck,heisenberg,goodall,fleming,maxwell,lovelace,schrodinger,hubble,fermi,dirac,noether,meitner,lavoisier"],
+["Name something cold","ice,snow,ice cream,freezer,winter,refrigerator/fridge,antarctica,popsicle/ice lolly,north pole/arctic,water,air conditioner/ac/air conditioning,igloo,glacier,iceberg,snowman,frost,penguin,steel/metal,wind,space,liquid nitrogen,dry ice,slushie/slush,hail,tundra,siberia,pluto,absolute zero"],
+["Name something round","ball,circle,wheel,earth/globe/planet,sun,moon,orange,coin,plate,pizza,clock,tire/tyre,ring,donut/doughnut,button,marble,bubble,eye/eyeball,balloon,apple,pearl,pancake,cookie,frisbee,hula hoop,cd/disc/dvd,bowl,lid,manhole cover/manhole,compass,porthole,bagel,yoyo"]
+].map(([q,list])=>({q,answers:list.split(",").map(a=>a.split("/"))}));
+
+/* ---------- constants ---------- */
+const ROUNDS=7, SECS=25, MAX=ROUNDS*1000, PX=0.8, L=Math.log10(384401);
+const altOf=s=>Math.pow(10,s/MAX*L)-1, sOf=a=>MAX*Math.log10(a+1)/L;
+const $=id=>document.getElementById(id);
+const world=$("world"), panel=$("panel"), ship=$("ship"), stars=$("stars"), streaks=$("streaks");
+
+const ZONES=[[0,"Troposphere"],[12,"Stratosphere"],[50,"Mesosphere"],[85,"Thermosphere"],[600,"Exosphere"],[10000,"Deep space"],[300000,"Lunar approach"]];
+const MARKS=[[.83,"tallest building on Earth — 828 m"],[4.8,"Mont Blanc summit"],[8.85,"Mount Everest — 8,849 m"],[11,"airliners cruise here"],
+[21,"the sky turns black overhead"],[41.4,"highest skydive ever — 41.4 km"],[82,"night-shining clouds"],[100,"the Kármán line — space begins"],
+[408,"International Space Station"],[547,"Hubble Space Telescope"],[2000,"end of low Earth orbit"],[20200,"GPS satellites"],
+[35786,"geostationary orbit"],[150000,"Earth is a blue marble behind you"],[384400,"the Moon — a perfect flight ends here"]];
+
+/* ---------- build the world ---------- */
+const y=s=>`calc(var(--base) + ${Math.round(s*PX)}px)`;
+world.style.height=`calc(var(--base) + ${MAX*PX}px + 75vh)`;
+const SKY=[[0,"#ffd7a3"],[350,"#f7a98b"],[800,"#86b8f2"],[1400,"#3b6fd1"],[2100,"#182a6b"],[2800,"#0a0f2e"],[3600,"#04050f"],[7000,"#000"]];
+world.style.background=`linear-gradient(to top,#ffd7a3 0,${SKY.map(([s,c])=>`${c} ${y(s)}`).join(",")})`;
+ZONES.slice(1).forEach(([a,name])=>addMark(sOf(a),name,"zone "+"l"));
+MARKS.forEach(([a,t],i)=>addMark(sOf(a),t,i%2?"l":"r"));
+function addMark(s,text,cls){const d=document.createElement("div");d.className="mark "+cls;d.style.bottom=y(s);d.innerHTML=`<span>${cls.includes("r")?text+" ──":"── "+text}</span>`;world.appendChild(d)}
+$("moon").style.bottom=y(MAX+40);
+for(let i=0;i<14;i++){const c=document.createElement("div");c.className="cloud";const w=90+Math.random()*170;
+  c.style.cssText=`width:${w}px;left:${Math.random()*100-8}%;bottom:${y(120+Math.random()*1250)};opacity:${.35+Math.random()*.5};animation-duration:${9+Math.random()*14}s`;world.appendChild(c)}
+[...stars.children].forEach((el,k)=>{let sh=[];for(let i=0;i<110;i++){const a=(.35+Math.random()*.65).toFixed(2);
+  sh.push(`${(Math.random()*100).toFixed(1)}vw ${(Math.random()*100).toFixed(1)}vh 0 ${Math.random()<.12?1:0}px rgba(255,255,${k?255:225},${a})`)}el.style.boxShadow=sh.join(",")});
+for(let i=0;i<16;i++){const s=document.createElement("i");s.style.cssText=`left:${Math.random()*100}%;animation-delay:${-Math.random()*.6}s;animation-duration:${.4+Math.random()*.4}s;height:${50+Math.random()*90}px`;streaks.appendChild(s)}
+
+/* ---------- answer matching ---------- */
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/&/g,"and").replace(/['’.]/g,"")
+  .replace(/[^a-z0-9]+/g," ").trim().replace(/^(the|a|an|mount|mt) /,"").replace(/ /g,"");
+const forms=k=>[k,k.replace(/s$/,""),k.replace(/es$/,"")].filter(x=>x.length>1||x===k);
+function lev(a,b,max){if(Math.abs(a.length-b.length)>max)return 99;let p=[...Array(b.length+1).keys()];
+  for(let i=1;i<=a.length;i++){let c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]!==b[j-1]));p=c}return p[b.length]}
+function index(p){if(p.map)return p.map;p.map=new Map();p.answers.forEach((al,i)=>al.forEach(a=>forms(norm(a)).forEach(f=>{if(!p.map.has(f))p.map.set(f,i)})));return p.map}
+function match(p,raw){const m=index(p),k=norm(raw);if(!k)return -1;
+  for(const f of forms(k))if(m.has(f))return m.get(f);
+  const tol=k.length>=9?2:k.length>=5?1:0;if(!tol)return -1;
+  let best=-1,bd=99;for(const [key,i] of m){if(key[0]!==k[0])continue;const d=lev(k,key,tol);if(d<=tol&&d<bd){bd=d;best=i}}return best}
+const pointsFor=(i,n)=>Math.round(150+850*Math.pow(i/(n-1),1.15));
+function share(i,n){let h=0;for(let k=1;k<=n;k++)h+=1/k;return 100/((i+1)*h)}
+
+/* ---------- storage (optional) ---------- */
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+function drawPrompts(){let seen=new Set(store.get("zenith.seen",[]));let pool=BANK.filter(p=>!seen.has(p.q));
+  if(pool.length<ROUNDS){seen=new Set();pool=BANK.slice()}
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  const pick=pool.slice(0,ROUNDS);pick.forEach(p=>seen.add(p.q));store.set("zenith.seen",[...seen]);return pick}
+
+/* ---------- HUD + camera ---------- */
+let G=null, shown=0, raf=0, tick=0;
+const fmtAlt=a=>a<1?Math.round(a*1000)+" m":a<100?a.toFixed(1)+" km":Math.round(a).toLocaleString("en-US")+" km";
+const zoneOf=a=>a<.005?"Launch pad":ZONES.filter(z=>a>=z[0]).pop()[1];
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function paintHud(s){const a=altOf(s);$("alt").textContent=fmtAlt(a);$("zone").textContent=zoneOf(a);$("score").textContent=Math.round(s).toLocaleString("en-US")}
+function flyTo(s,ms=1900,snap=false){world.classList.toggle("snap",snap);world.style.transform=`translateY(${s*PX}px)`;
+  stars.style.opacity=Math.max(0,Math.min(1,(s-1500)/1200));
+  const from=shown,t0=performance.now();cancelAnimationFrame(raf);
+  (function step(now){const t=Math.min(1,(now-t0)/ms);shown=from+(s-from)*ease(t);paintHud(shown);if(t<1)raf=requestAnimationFrame(step)})(t0)}
+function pips(){$("pips").innerHTML=G.prompts.map((_,i)=>{const r=G.results[i];return `<i class="${r?(r.pts?"hit":"miss"):i===G.round?"now":""}"></i>`}).join("")}
+
+/* ---------- screens ---------- */
+function view(html){panel.innerHTML=`<div class="view">${html}</div>`}
+function intro(){
+  $("hud").classList.remove("on");ship.className="pad";
+  const best=store.get("zenith.best",0);
+  view(`<div class="eyebrow">A game of uncommon answers</div>
+  <h1>${[..."Zenith"].map((c,i)=>`<span style="animation-delay:${i*70}ms">${c}</span>`).join("")}</h1>
+  <p>Seven prompts. Answer each with something true — but the <b style="color:#fff">less obvious</b> your answer, the harder the engines burn. A perfect flight reaches the Moon.</p>
+  <div class="rules"><div><b>7</b>prompts per flight</div><div><b>${SECS}s</b>on every clock</div><div><b>∞</b>flights, new prompts each time</div></div>
+  <button class="btn" id="go">Launch <kbd>↵</kbd></button>
+  ${best?`<div class="best">BEST FLIGHT · ${fmtAlt(altOf(best)).toUpperCase()} · ${best.toLocaleString("en-US")} PTS</div>`:""}`);
+  $("go").onclick=start;$("go").focus();
+}
+function start(){
+  G={prompts:drawPrompts(),round:0,score:0,results:[]};
+  $("hud").classList.add("on");shown=0;flyTo(0,700,true);ship.className="hover";ask();
+}
+/* ---------- AI judge for answers that aren't on the built-in list ---------- */
+const JUDGE_URL="";
+const judged=new Map();
+async function judge(p,v){
+  if(!JUDGE_URL)return null;const key=p.q+"|"+norm(v);if(judged.has(key))return judged.get(key);
+  try{const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);
+    const r=await fetch(JUDGE_URL,{method:"POST",headers:{"Content-Type":"application/json"},signal:c.signal,
+      body:JSON.stringify({prompt:p.q,answer:v,common:p.answers.slice(0,4).map(a=>a[0]),rare:p.answers.slice(-4).map(a=>a[0])})});
+    clearTimeout(t);if(!r.ok)return null;const j=await r.json();if(typeof j.valid!=="boolean")return null;judged.set(key,j);return j;
+  }catch{return null}
+}
+function ask(){
+  const p=G.prompts[G.round],n=p.answers.length;pips();$("round").textContent=`Prompt ${G.round+1} / ${ROUNDS}`;
+  view(`<div class="timer"><div class="bar"><i id="bar"></i></div><div class="secs" id="secs">${SECS}</div></div>
+  <h2>${p.q}</h2>
+  <form class="field" id="f" autocomplete="off"><input id="in" placeholder="Type an answer…" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send"><button>Send</button></form>
+  <div class="hint" id="hint">Obvious answers barely lift off. Dig deeper.</div>`);
+  const input=$("in");let left=SECS*1000,last=performance.now(),busy=false,done=false;input.focus();
+  const hint=(t,bad)=>{const h=$("hint");if(!h)return;h.className="hint"+(bad?" bad":"");h.textContent=t};
+  async function submit(final){
+    if(busy||done)return;const v=input.value.trim();
+    if(!v){if(final){done=true;resolve(p,null,"")}return}
+    const i=match(p,v);
+    if(i>=0){done=true;return resolve(p,{name:p.answers[i][0],frac:i/(n-1),pct:share(i,n)},v)}
+    busy=true;input.disabled=true;hint("The judge is thinking…");   // the clock is paused while the AI decides
+    const j=await judge(p,v);busy=false;last=performance.now();
+    if(j&&j.valid){done=true;return resolve(p,{name:j.name||v,frac:j.rarity/100,ai:true,rarity:j.rarity},v)}
+    if(final){done=true;return resolve(p,null,v)}
+    input.disabled=false;input.focus();input.select();
+    const f=$("f");f.classList.remove("shake");void f.offsetWidth;f.classList.add("shake");
+    hint(j?`The judge says “${v}” doesn't fit — try another.`:`“${v}” isn't on the list — try something else.`,true);
+  }
+  $("f").onsubmit=e=>{e.preventDefault();submit(false)};
+  cancelAnimationFrame(tick);
+  (function loop(now){const b=$("bar");if(!b||done)return;
+    if(!busy)left-=now-last;last=now;left=Math.max(0,left);
+    b.style.transform=`scaleX(${left/(SECS*1000)})`;$("secs").textContent=Math.ceil(left/1000);
+    b.parentNode.parentNode.classList.toggle("low",left<6000);
+    if(left<=0&&!busy)submit(true);
+    tick=requestAnimationFrame(loop)})(performance.now());
+}
+function resolve(p,res,typed){
+  cancelAnimationFrame(tick);
+  const n=p.answers.length,hit=!!res,f=hit?Math.max(0,Math.min(1,res.frac)):0;
+  const pts=hit?Math.round(150+850*Math.pow(f,1.15)):0,name=hit?res.name:(typed||"");
+  G.results[G.round]={q:p.q,name,pts};G.score+=pts;pips();
+  const last=G.round===ROUNDS-1;
+  const verdict=!hit?"":f<.1?"The crowd favourite.":f<.35?"A safe pick.":f<.7?"Nicely off the beaten path.":"Almost nobody goes there.";
+  const why=!hit?"":res.ai?`The AI judge accepted this and rated its rarity <b>${res.rarity}/100</b>. `
+    :`Roughly <b>${res.pct<1?res.pct.toFixed(1):Math.round(res.pct)}%</b> of people would say this. `;
+  view(`<div class="eyebrow">${hit?verdict:typed?"Didn't count":"Out of time"}</div>
+  <div class="said"><h2>${hit?esc(name):typed?esc(typed):"No answer"}</h2><div class="pts ${pts?"":"zero"}" id="pts">+0</div></div>
+  <div class="meter"><i id="dot"></i></div><div class="ends"><span>Everyone says it</span><span>Nobody says it</span></div>
+  <div class="facts">${why}Most common: <b>${p.answers[0][0]}</b>. Rarest we had: <b>${p.answers[n-1][0]}</b>.</div>
+  <button class="btn" id="next" disabled>${last?"See your flight":"Next prompt"} <kbd>↵</kbd></button>`);
+  requestAnimationFrame(()=>{if(!$("dot"))return;if(hit)$("dot").style.left=(f*100)+"%";else $("dot").style.opacity=.25});
+  if(hit){const t0=performance.now();(function up(now){const t=Math.min(1,(now-t0)/1100),el=$("pts");if(!el)return;el.textContent="+"+Math.round(pts*ease(t));if(t<1)requestAnimationFrame(up)})(t0);
+    ship.className="burn";streaks.classList.add("on");flyTo(G.score);
+    setTimeout(()=>{ship.className="hover";streaks.classList.remove("on")},1900);
+  }else{ship.className="hover stall";setTimeout(()=>ship.className="hover",550)}
+  const btn=$("next");setTimeout(()=>{btn.disabled=false;btn.focus()},hit?900:500);
+  btn.onclick=()=>{G.round++;last?summary():ask()};
+}
+function summary(){
+  pips();$("round").innerHTML="&nbsp;";
+  const best=store.get("zenith.best",0),record=G.score>best;if(record)store.set("zenith.best",G.score);
+  const a=altOf(G.score),passed=MARKS.filter(m=>m[0]<=a).pop();
+  view(`<div class="eyebrow">${record&&best?"New personal best":"Flight complete"}</div>
+  <div class="big">${fmtAlt(a)}</div>
+  <p>${G.score.toLocaleString("en-US")} of ${MAX.toLocaleString("en-US")} points · ${zoneOf(a)}${passed?` · you cleared “${passed[1]}”`:""}</p>
+  <div class="rows">${G.results.map((r,i)=>`<div class="${r.pts?"":"nil"}" style="animation-delay:${i*60}ms"><q>${r.q}</q><b>${r.name?esc(r.name):"—"}</b><u>${r.pts?"+"+r.pts:"0"}</u></div>`).join("")}</div>
+  <button class="btn" id="again">Fly again — new prompts <kbd>↵</kbd></button>
+  <div class="best">BEST · ${Math.max(best,G.score).toLocaleString("en-US")} PTS</div>`);
+  $("again").onclick=start;$("again").focus();
+}
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+intro();
+</script>
+</body>
+</html>
