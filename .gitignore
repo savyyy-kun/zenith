@@ -1,2 +1,9 @@
 node_modules/
 .wrangler/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.impeccable/review/
+.impeccable/questions/
+.impeccable/direction-payload.json

@@ -1,0 +1,75 @@
+/* Trajectory plot: log-altitude telemetry. Geometry is computed in px in TrajectoryPlot.tsx; this file owns paint + motion. */
+.root { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; }
+.svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+
+/* frame */
+.band { fill: var(--panel); }
+.grid { stroke: var(--grid); stroke-width: 1; }
+.axis { fill: none; stroke: var(--rule); stroke-width: 1; }
+
+/* landmark gridlines: points solid, zone boundaries long-dash; unlabeled lines recede */
+.lm { stroke: var(--trace); stroke-width: 1; opacity: 0.42; }
+.zone { stroke-dasharray: 8 5; opacity: 0.3; }
+.quiet { opacity: 0.16; }
+
+/* text: condensed caps for names, mono for numbers; ground-colored knockout keeps labels legible over rules */
+.label, .slot, .unit, .event {
+  font-family: var(--display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.label { fill: var(--trace); paint-order: stroke; stroke: var(--ground); stroke-width: 3px; stroke-linejoin: round; }
+.zoneLabel { fill: var(--ink-dim); font-weight: 500; letter-spacing: 0.16em; }
+.value { font-family: var(--mono); font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; fill: var(--ink-dim); }
+.tick { font-family: var(--mono); font-variant-numeric: tabular-nums; fill: var(--ink-dim); }
+.unit { fill: var(--ink-dim); }
+.slot { fill: var(--ink-dim); }
+.time { font-family: var(--mono); font-variant-numeric: tabular-nums; fill: var(--ink-dim); }
+/* event labels: the answer that made the burn, plus its points */
+.event { fill: var(--ink); paint-order: stroke; stroke: var(--ground); stroke-width: 3px; stroke-linejoin: round; }
+.eventPts { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0; fill: var(--trace); }
+.slotDone { fill: var(--ink); }
+.slotActive { fill: var(--burn); }
+.activeRule { stroke: var(--burn); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.7; }
+
+/* trace */
+.burn, .coast, .miss { fill: none; stroke-width: 2; stroke-linecap: butt; stroke-linejoin: round; }
+.burn { stroke: var(--burn); }
+.coast { stroke: var(--trace); stroke-width: 2.5; }
+.miss { stroke: var(--miss); stroke-width: 1.5; stroke-dasharray: 4 4; }
+
+/* current position */
+.marker { fill: var(--ground); stroke: var(--ink); stroke-width: 1.25; }
+.live { stroke: var(--burn); }
+
+/* the burn: one authored moment. Base styles are the end state, so `animation: none` is always correct. */
+.draw { stroke-dasharray: 1 1; animation: draw var(--draw-ms) var(--ease-out); }
+@keyframes draw { from { stroke-dashoffset: 1; } }
+
+.cool { animation: fade-in 450ms ease-out var(--draw-ms) backwards; }
+.appear { animation: fade-in 300ms ease-out var(--d) backwards; }
+@keyframes fade-in { from { opacity: 0; } }
+
+.wipe { animation: wipe var(--miss-ms) var(--ease-out); }
+@keyframes wipe {
+  from { clip-path: inset(-4px 100% -4px 0); }
+  to { clip-path: inset(-4px 0 -4px 0); }
+}
+
+/* crossing flash: snaps to bone when the drawing head reaches the line, then settles back to teal */
+.flashLine { animation: flash-line 1100ms cubic-bezier(0.5, 0, 0.75, 0) var(--d); }
+.flashText { animation: flash-text 1100ms cubic-bezier(0.5, 0, 0.75, 0) var(--d); }
+@keyframes flash-line { from { stroke: var(--ink); opacity: 1; } }
+@keyframes flash-text { from { fill: var(--ink); } }
+
+.standby { animation: standby 2.4s linear infinite; }
+@keyframes standby {
+  0%, 55% { opacity: 1; }
+  65%, 90% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draw, .cool, .appear, .wipe, .flashLine, .flashText, .standby { animation: none; }
+}

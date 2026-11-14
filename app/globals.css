@@ -1,0 +1,26 @@
+/* Mission Control tokens. Components own their own styles (CSS modules); only tokens + base live here. */
+:root {
+  --ground: #0b0f14;      /* console black */
+  --panel: #10161d;       /* raised console surface */
+  --rule: #1f2a35;        /* hairline console rules */
+  --grid: #16202a;        /* graticule */
+  --ink: #e8e3d3;         /* phosphor bone */
+  --ink-dim: #9aa3a6;     /* secondary ink, ≥4.5:1 on ground */
+  --burn: #ff6b2c;        /* every live/active state, every burn */
+  --trace: #7fd1c7;       /* telemetry traces, gridlines, data */
+  --miss: #5a6670;
+
+  --display: var(--font-display), "Arial Narrow", sans-serif;
+  --sans: var(--font-body), system-ui, sans-serif;
+  --mono: var(--font-mono), ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--ground); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+::selection { background: var(--burn); color: var(--ground); }
+:focus-visible { outline: 2px solid var(--burn); outline-offset: 2px; }
+input { caret-color: var(--burn); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
